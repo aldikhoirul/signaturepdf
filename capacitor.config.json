@@ -1,0 +1,8 @@
+{
+  "appId": "com.tandatangan.pdf",
+  "appName": "Tanda Tangan PDF",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
