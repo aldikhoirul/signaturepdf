@@ -58,9 +58,56 @@
     confirmOk: $('#confirmOk')
   };
 
+  /* ===== Signature storage ===== */
+  const SIGNATURE_STORAGE_KEY = 'ttd-pdf.signatures.v1';
+  let storageWarned = false;
+
+  function loadStoredLibrary() {
+    try {
+      const raw = window.localStorage.getItem(SIGNATURE_STORAGE_KEY);
+      if (!raw) return { signatures: [], activeSignatureId: null };
+      const parsed = JSON.parse(raw);
+      const list = Array.isArray(parsed.signatures) ? parsed.signatures : [];
+      const valid = [];
+      list.forEach(function (item) {
+        if (!item || typeof item.id !== 'string' || !item.id) return;
+        if (typeof item.dataUrl !== 'string' || item.dataUrl.indexOf('data:image/') !== 0) return;
+        if (!(item.width > 0) || !(item.height > 0)) return;
+        valid.push({
+          id: item.id,
+          dataUrl: item.dataUrl,
+          width: item.width,
+          height: item.height,
+          source: item.source === 'upload' ? 'upload' : 'drawn'
+        });
+      });
+      const active = typeof parsed.activeSignatureId === 'string' &&
+        valid.some(function (item) { return item.id === parsed.activeSignatureId; })
+        ? parsed.activeSignatureId
+        : null;
+      return { signatures: valid, activeSignatureId: active };
+    } catch (error) {
+      return { signatures: [], activeSignatureId: null };
+    }
+  }
+
+  function persistLibrary() {
+    try {
+      window.localStorage.setItem(SIGNATURE_STORAGE_KEY, JSON.stringify({
+        signatures: signatures,
+        activeSignatureId: activeSignatureId
+      }));
+    } catch (error) {
+      if (storageWarned) return;
+      storageWarned = true;
+      toast('Tanda tangan tidak bisa disimpan di perangkat ini.', true);
+    }
+  }
+
   const downloadLabel = elements.btnDownload.innerHTML;
-  const signatures = [];
-  let activeSignatureId = null;
+  const storedLibrary = loadStoredLibrary();
+  const signatures = storedLibrary.signatures;
+  let activeSignatureId = storedLibrary.activeSignatureId;
   let uploadResult = null;
   let uploadFile = null;
   let signatureCounter = 0;
@@ -146,6 +193,7 @@
     editor.setActiveSignature(activeSignatureId);
     renderLibrary();
     updatePlacementHint();
+    persistLibrary();
     toast('Tanda tangan siap. Klik halaman PDF untuk menempel.');
     return entry;
   }
@@ -155,6 +203,7 @@
     editor.setActiveSignature(id);
     renderLibrary();
     updatePlacementHint();
+    persistLibrary();
   }
 
   function toggleActiveSignature(id) {
@@ -172,6 +221,7 @@
     if (activeSignatureId === id) setActiveSignature(null);
     renderLibrary();
     updatePlacementHint();
+    persistLibrary();
   }
 
   function renderLibrary() {
@@ -587,6 +637,7 @@
 
   pad.onChange(true);
   renderLibrary();
+  if (activeSignatureId) editor.setActiveSignature(activeSignatureId);
   updatePlacementHint();
   syncUi(editor.getState());
   syncSelection(null);

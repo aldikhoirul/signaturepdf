@@ -1,5 +1,5 @@
 /* Service worker: aplikasi tetap bisa dibuka tanpa internet setelah kunjungan pertama. */
-const CACHE = 'ttd-pdf-v1';
+const CACHE = 'ttd-pdf-v2';
 const SHELL = [
   './index.html',
   './css/styles.css',
